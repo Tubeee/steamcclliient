@@ -116,41 +116,48 @@ int main(int argc, char* argv[])
 				case SteamServerConnectFailure_t::k_iCallback:
 				{
 					SteamServerConnectFailure_t* cb = (SteamServerConnectFailure_t*)msg.m_pubParam;
-					if (cb->m_eResult == k_EResultAccountLogonDenied)
+					switch (cb->m_eResult)
 					{
-						std::cout << "Steam guard code required: ";
-						std::string code;
-						std::cin >> code;
-
-						GClientContext()->ClientUser()->Set2ndFactorAuthCode(code.c_str(), false);
-						GClientContext()->ClientUser()->LogOn(GClientContext()->ClientUser()->GetSteamID());
-					}
-					if (cb->m_eResult == k_EResultAccountLoginDeniedNeedTwoFactor)
-					{
-						std::cout << "Steam 2FA code required: ";
-						std::string code;
-						std::cin >> code;
-
-						GClientContext()->ClientUser()->SetTwoFactorCode(code.c_str());
-						GClientContext()->ClientUser()->LogOn(GClientContext()->ClientUser()->GetSteamID());
-					}
-					if (cb->m_eResult == k_EResultInvalidPassword)
-					{
-						std::cout << "Could not log in as " << username << "! Wrong password or invalid session!" << std::endl;
-						std::cout << "Re-enter password: ";
-						std::cin >> password;
-						if (password.empty())
+						case k_EResultAccountLogonDenied:
 						{
+							std::cout << "Steam guard code required: ";
+							std::string code;
+							std::cin >> code;
+
+							GClientContext()->ClientUser()->Set2ndFactorAuthCode(code.c_str(), false);
+							GClientContext()->ClientUser()->LogOn(GClientContext()->ClientUser()->GetSteamID());
+						}
+						break;
+						case k_EResultAccountLoginDeniedNeedTwoFactor:
+						{
+							std::cout << "Steam 2FA code required: ";
+							std::string code;
+							std::cin >> code;
+
+							GClientContext()->ClientUser()->SetTwoFactorCode(code.c_str());
+							GClientContext()->ClientUser()->LogOn(GClientContext()->ClientUser()->GetSteamID());
+						}
+						break;
+						case k_EResultInvalidPassword:
+						{
+							std::cout << "Could not log in as " << username << "! Wrong password or invalid session!" << std::endl;
+							std::cout << "Re-enter password: ";
+							std::cin >> password;
+							if (password.empty())
+							{
+								running = false;
+							}
+
+							GClientContext()->ClientUser()->SetLoginInformation(username.c_str(), password.c_str(), true);
+							GClientContext()->ClientUser()->LogOn(GClientContext()->ClientUser()->GetSteamID());
+						}
+						break;
+						default:
+						{
+							std::cout << "Could not connect to steam (EResult: " << cb->m_eResult << ")" << std::endl;
 							running = false;
 						}
-
-						GClientContext()->ClientUser()->SetLoginInformation(username.c_str(), password.c_str(), true);
-						GClientContext()->ClientUser()->LogOn(GClientContext()->ClientUser()->GetSteamID());
-					}
-					else
-					{
-						std::cout << "Could not connect to steam (EResult: " << cb->m_eResult << ")" << std::endl;
-						running = false;
+						break;
 					}
 				}
 				break;
