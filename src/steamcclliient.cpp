@@ -15,9 +15,9 @@ int main(int argc, char* argv[])
 {
 	if (argc > 1)
 	{
-		if (std::string(argv[1]).compare("install") == 0)
+		if (std::string(argv[1]).compare("run") == 0)
 		{
-			actionToPerform = SteamAction::Install;
+			actionToPerform = SteamAction::Run;
 		}
 		if (std::string(argv[1]).compare("install") == 0)
 		{
