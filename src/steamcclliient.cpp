@@ -167,24 +167,50 @@ int main(int argc, char* argv[])
 					}
 					delete[] apps;
 
+					EAppState appState = GClientContext()->ClientAppManager()->GetAppInstallState(appIDToUse);
+
 					switch (actionToPerform)
 					{
 						case SteamAction::Install:
 						{
-							std::cout << "Downloading AppID " << appIDToUse << std::endl;
-							GClientContext()->ClientAppManager()->InstallApp(appIDToUse, 0, false); // installing to first library folder
+							if (appState != k_EAppStateFullyInstalled)
+							{
+								std::cout << "Downloading AppID " << appIDToUse << std::endl;
+								GClientContext()->ClientAppManager()->InstallApp(appIDToUse, 0, false); // installing to first library folder
+							}
+							else
+							{
+								std::cout << "App is already installed" << std::endl;
+								running = false;
+							}
 						}
 						break;
 						case SteamAction::Run:
 						{
-							std::cout << "Launching AppID " << appIDToUse << std::endl;
-							GClientContext()->ClientAppManager()->LaunchApp(CGameID(appIDToUse), 0, 100, ""); // ( ELaunchSource == 100 == new library details page (?))
+							if (appState == k_EAppStateFullyInstalled)
+							{
+								std::cout << "Launching AppID " << appIDToUse << std::endl;
+								GClientContext()->ClientAppManager()->LaunchApp(CGameID(appIDToUse), 0, 100, ""); // ( ELaunchSource == 100 == new library details page (?))
+							}
+							else
+							{
+								std::cout << "App is not installed" << std::endl;
+								running = false;
+							}
 						}
 						break;
 						case SteamAction::Uninstall:
 						{
-							std::cout << "Uninstalling AppID " << appIDToUse << std::endl;
-							GClientContext()->ClientAppManager()->UninstallApp(appIDToUse, false);
+							if (appState == k_EAppStateFullyInstalled)
+							{
+								std::cout << "Uninstalling AppID " << appIDToUse << std::endl;
+								GClientContext()->ClientAppManager()->UninstallApp(appIDToUse, false);
+							}
+							else
+							{
+								std::cout << "App is not installed" << std::endl;
+								running = false;
+							}
 						}
 						break;
 					}
@@ -199,8 +225,8 @@ int main(int argc, char* argv[])
 					{
 						if (stateChangeCb->m_eOldState != stateChangeCb->m_eNewState)
 						{
-							if (stateChangeCb->m_eNewState == 4 ||	// fully installed / closed
-								stateChangeCb->m_eNewState == 1		// uninstalled
+							if (stateChangeCb->m_eNewState == k_EAppStateFullyInstalled || 
+								stateChangeCb->m_eNewState == k_EAppStateUninstalled 
 							)
 							{
 								std::cout << std::endl << "Done" << std::endl;
