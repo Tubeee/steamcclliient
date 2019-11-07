@@ -4,11 +4,11 @@
 #include "stuff.h"
 #include "clientcontext.h"
 
-using json = nlohmann::json;
 const char* settingsPath = "./settings.json";
 
 AppId_t appIDToUse = 0;
 SteamAction actionToPerform = SteamAction::Invalid;
+
 std::vector<AppId_t> accountApps;
 
 int main(int argc, char* argv[])
@@ -201,7 +201,9 @@ int main(int argc, char* argv[])
 						break;
 						case SteamAction::Uninstall:
 						{
-							if (appState == k_EAppStateFullyInstalled)
+							if (appState != k_EAppStateInvalid &&
+								appState != k_EAppStateUninstalled
+							)
 							{
 								std::cout << "Uninstalling AppID " << appIDToUse << std::endl;
 								GClientContext()->ClientAppManager()->UninstallApp(appIDToUse, false);
@@ -223,10 +225,21 @@ int main(int argc, char* argv[])
 					AppEventStateChange_t* stateChangeCb = (AppEventStateChange_t*)msg.m_pubParam;
 					if (stateChangeCb->m_nAppID == appIDToUse)
 					{
+						if (actionToPerform == SteamAction::Install)
+						{
+							if ((stateChangeCb->m_eNewState & k_EAppStateUpdateRunning) &&
+								(stateChangeCb->m_eNewState & k_EAppUpdateStateValidating)
+							)
+							{
+								showDownloadProgress(100, 100);
+								std::cout << std::endl << "Validating..." << std::endl;
+							}
+						}
+
 						if (stateChangeCb->m_eOldState != stateChangeCb->m_eNewState)
 						{
-							if (stateChangeCb->m_eNewState == k_EAppStateFullyInstalled || 
-								stateChangeCb->m_eNewState == k_EAppStateUninstalled 
+							if ( stateChangeCb->m_eNewState == k_EAppStateFullyInstalled || 
+								 stateChangeCb->m_eNewState == k_EAppStateUninstalled 
 							)
 							{
 								std::cout << std::endl << "Done" << std::endl;
