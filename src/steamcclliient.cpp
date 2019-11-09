@@ -19,18 +19,23 @@ int main(int argc, char* argv[])
 		{
 			actionToPerform = SteamAction::Run;
 		}
-		if (std::string(argv[1]).compare("install") == 0)
+		else if (std::string(argv[1]).compare("install") == 0)
 		{
 			actionToPerform = SteamAction::Install;
 		}
-		if (std::string(argv[1]).compare("uninstall") == 0)
+		else if (std::string(argv[1]).compare("uninstall") == 0)
 		{
 			actionToPerform = SteamAction::Uninstall;
+		}
+		else
+		{
+			actionToPerform = SteamAction::Invalid;
 		}
 	}
 
 	if (actionToPerform == SteamAction::Invalid)
 	{
+		std::cout << std::endl;
 		std::cout << "Usage: scc <command> <appid>" << std::endl;
 		std::cout << "  Commands are:" << std::endl;
 		std::cout << "    install   - to install app" << std::endl;
@@ -84,27 +89,48 @@ int main(int argc, char* argv[])
 		sccSettings.user = username;
 	}
 	
-	if (!GClientContext()->ClientUser()->BHasCachedCredentials(username.c_str()))
-	{
-		std::cout << "Enter password: ";
-		std::cin >> password;
-		if (password.empty())
-		{
-			return 0;
-		}
+	saveSettings(sccSettings, settingsPath);
 
-		GClientContext()->ClientUser()->SetLoginInformation(username.c_str(), password.c_str(), true);
-		GClientContext()->ClientUser()->LogOn(GClientContext()->ClientUser()->GetSteamID());
+	EAppState appState = GClientContext()->ClientAppManager()->GetAppInstallState(appIDToUse);
+
+	bool running = true;
+
+	// looks like steam apps can be uninstalled without logging in to steam account
+	if (actionToPerform != SteamAction::Uninstall)
+	{
+		if (!GClientContext()->ClientUser()->BHasCachedCredentials(username.c_str()))
+		{
+			std::cout << "Enter password: ";
+			std::cin >> password;
+			if (password.empty())
+			{
+				return 0;
+			}
+
+			GClientContext()->ClientUser()->SetLoginInformation(username.c_str(), password.c_str(), true);
+			GClientContext()->ClientUser()->LogOn(GClientContext()->ClientUser()->GetSteamID());
+		}
+		else
+		{
+			GClientContext()->ClientUser()->SetAccountNameForCachedCredentialLogin(username.c_str(), false);
+			GClientContext()->ClientUser()->LogOn(GClientContext()->ClientUser()->GetSteamID());
+		}
 	}
 	else
 	{
-		GClientContext()->ClientUser()->SetAccountNameForCachedCredentialLogin(username.c_str(), false);
-		GClientContext()->ClientUser()->LogOn(GClientContext()->ClientUser()->GetSteamID());
+		if (appState != k_EAppStateInvalid &&
+			appState != k_EAppStateUninstalled
+		)
+		{
+			std::cout << "Uninstalling AppID " << appIDToUse << std::endl;
+			GClientContext()->ClientAppManager()->UninstallApp(appIDToUse, false);
+		}
+		else
+		{
+			std::cout << "App is not installed" << std::endl;
+			running = false;
+		}
 	}
-
-	saveSettings(sccSettings, settingsPath);
-
-	bool running = true;
 
 	while (running)
 	{
@@ -174,8 +200,6 @@ int main(int argc, char* argv[])
 					}
 					delete[] apps;
 
-					EAppState appState = GClientContext()->ClientAppManager()->GetAppInstallState(appIDToUse);
-
 					switch (actionToPerform)
 					{
 						case SteamAction::Install:
@@ -198,22 +222,6 @@ int main(int argc, char* argv[])
 							{
 								std::cout << "Launching AppID " << appIDToUse << std::endl;
 								GClientContext()->ClientAppManager()->LaunchApp(CGameID(appIDToUse), 0, 100, ""); // ( ELaunchSource == 100 == new library details page (?))
-							}
-							else
-							{
-								std::cout << "App is not installed" << std::endl;
-								running = false;
-							}
-						}
-						break;
-						case SteamAction::Uninstall:
-						{
-							if (appState != k_EAppStateInvalid &&
-								appState != k_EAppStateUninstalled
-							)
-							{
-								std::cout << "Uninstalling AppID " << appIDToUse << std::endl;
-								GClientContext()->ClientAppManager()->UninstallApp(appIDToUse, false);
 							}
 							else
 							{
