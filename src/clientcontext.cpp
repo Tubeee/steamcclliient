@@ -6,8 +6,10 @@ m_pClientAppManager(nullptr),
 m_pClientUtils(nullptr),
 m_pClientUser(nullptr),
 m_pClientEngine(nullptr),
+m_pClientRemoteStorage(nullptr),
 m_hPipe(0),
-m_hUser(0)
+m_hUser(0),
+m_bInitialized(false)
 {
 }
 
@@ -29,6 +31,11 @@ SteamClientContext::~SteamClientContext()
 
 bool SteamClientContext::Init()
 {
+	if (m_bInitialized)
+	{
+		return true;
+	}
+
 	if (!OpenAPI_LoadLibrary())
 	{
 		return false;
@@ -70,6 +77,14 @@ bool SteamClientContext::Init()
 		return false;
 	}
 
+	m_pClientRemoteStorage = (IClientRemoteStorage*)m_pClientEngine->GetIClientRemoteStorage(m_hUser, m_hPipe);
+	if (!m_pClientRemoteStorage)
+	{
+		return false;
+	}
+
+	m_bInitialized = true;
+
 	return true;
 }
 
@@ -91,6 +106,11 @@ IClientUtils* SteamClientContext::ClientUtils()
 IClientUser* SteamClientContext::ClientUser()
 {
 	return m_pClientUser;
+}
+
+IClientRemoteStorage* SteamClientContext::ClientRemoteStorage()
+{
+	return m_pClientRemoteStorage;
 }
 
 void SteamClientContext::RunCallbacks()

@@ -20,6 +20,7 @@ public:
 	IClientApps* ClientApps();
 	IClientUtils* ClientUtils();
 	IClientUser* ClientUser();
+	IClientRemoteStorage* ClientRemoteStorage();
 
 	void RunCallbacks();
 
@@ -32,9 +33,12 @@ private:
 	IClientApps* m_pClientApps;
 	IClientUser* m_pClientUser;
 	IClientUtils* m_pClientUtils;
+	IClientRemoteStorage* m_pClientRemoteStorage;
 
 	HSteamPipe m_hPipe;
 	HSteamUser m_hUser;
+
+	bool m_bInitialized;
 };
 
 SteamClientContext* GClientContext();

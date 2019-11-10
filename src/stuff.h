@@ -3,6 +3,7 @@
 #pragma once
 
 #include <string>
+#include <nlohmann/json.hpp>
 
 struct SCCSettings
 {
@@ -30,5 +31,7 @@ SCCSettings loadSettings(const char* path);
 void saveSettings(SCCSettings& sets, const char* path);
 
 void showDownloadProgress(uint64_t bytesToDownload, uint64_t bytesDownloaded);
+
+std::string getSelfPath();
 
 #endif // STUFF_H

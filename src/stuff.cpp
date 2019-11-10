@@ -1,6 +1,11 @@
 #include <iostream>
 #include <fstream>
-#include <nlohmann/json.hpp>
+#include <stdlib.h>
+
+#ifdef _WIN32
+	#include <Windows.h>
+#endif
+
 #include "stuff.h"
 
 
@@ -9,7 +14,6 @@ bool fileExists(const char* path)
 	std::ifstream iFile(path);
 	return iFile.good();
 }
-
 
 void to_json(nlohmann::json& j, const SCCSettings& s) {
 	j = nlohmann::json{ {"user", s.user} };
@@ -63,4 +67,18 @@ void showDownloadProgress(uint64_t bytesToDownload, uint64_t bytesDownloaded)
 		}
 	}
 	std::cout << "] " << int(donloadProgress * 100.0) << "%\r";
+}
+
+std::string getSelfPath()
+{
+#ifdef _WIN32
+	char* buf = new char[260];
+	GetModuleFileName(NULL, buf, 260);
+	std::string out(buf);
+	size_t lastDel = out.find_last_of('\\');
+	delete[] buf;
+	return out.substr(0, lastDel+1);
+#else
+	return "";
+#endif // _WIN
 }

@@ -1,29 +1,62 @@
 #include <iostream>
 #include <fstream>
-#include <nlohmann/json.hpp>
 #include "stuff.h"
 #include "clientcontext.h"
 
-const char* settingsPath = "./settings.json";
-
-AppId_t appIDToUse = 0;
-SteamAction actionToPerform = SteamAction::Invalid;
-
-std::vector<AppId_t> accountApps;
+std::string settingsPath = "./settings.json";
 
 int main(int argc, char* argv[])
 {
+	std::vector<AppId_t> accountApps;
+	std::vector<std::string> args;
+
+	AppId_t appIDToUse = 0;
+	SteamAction actionToPerform = SteamAction::Invalid;
+
+	std::string selfPath = getSelfPath();
+	if (!selfPath.empty())
+	{
+		settingsPath = selfPath + "settings.json";
+	}
+
 	if (argc > 1)
 	{
-		if (std::string(argv[1]).compare("run") == 0)
+		if (std::string(argv[1]).compare(0, 8, "steam://") == 0)
+		{
+			std::string steamProtocolLink = std::string(std::string(argv[1]));
+			size_t delimOffsetOld = 8;
+			size_t delimOffset = steamProtocolLink.find_first_of('/', delimOffsetOld);
+			while (delimOffset != std::string::npos)
+			{
+				args.push_back(steamProtocolLink.substr(delimOffsetOld, delimOffset - delimOffsetOld));
+				delimOffsetOld = delimOffset + 1;
+				delimOffset = steamProtocolLink.find_first_of('/', delimOffsetOld);
+			}
+			if (delimOffsetOld < steamProtocolLink.size())
+			{
+				args.push_back(steamProtocolLink.substr(delimOffsetOld, steamProtocolLink.size() - delimOffsetOld));
+			}
+		}
+		else
+		{
+			for (int i = 1; i < argc; ++i)
+			{
+				args.push_back(std::string(argv[i]));
+			}
+		}
+	}
+
+	if (args.size() > 0)
+	{
+		if (std::string(args[0]).compare("run") == 0 || std::string(args[0]).compare("launch") == 0)
 		{
 			actionToPerform = SteamAction::Run;
 		}
-		else if (std::string(argv[1]).compare("install") == 0)
+		else if (std::string(args[0]).compare("install") == 0)
 		{
 			actionToPerform = SteamAction::Install;
 		}
-		else if (std::string(argv[1]).compare("uninstall") == 0)
+		else if (std::string(args[0]).compare("uninstall") == 0)
 		{
 			actionToPerform = SteamAction::Uninstall;
 		}
@@ -50,9 +83,9 @@ int main(int argc, char* argv[])
 		actionToPerform == SteamAction::Uninstall
 	)
 	{
-		if (argc > 2)
+		if (args.size() > 1)
 		{
-			appIDToUse = std::stoul(argv[2]);
+			appIDToUse = std::stoul(args[1]);
 			if (appIDToUse == 0)
 			{
 				std::cout << "Wrong AppID" << std::endl;
@@ -72,7 +105,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	SCCSettings sccSettings = loadSettings(settingsPath);
+	SCCSettings sccSettings = loadSettings(settingsPath.c_str());
 
 	std::string username = sccSettings.user;
 	std::string password;
@@ -89,15 +122,28 @@ int main(int argc, char* argv[])
 		sccSettings.user = username;
 	}
 	
-	saveSettings(sccSettings, settingsPath);
+	saveSettings(sccSettings, settingsPath.c_str());
 
 	EAppState appState = GClientContext()->ClientAppManager()->GetAppInstallState(appIDToUse);
 
 	bool running = true;
 
 	// looks like steam apps can be uninstalled without logging in to steam account
+	// also no need to log in if app is not installed
 	if (actionToPerform != SteamAction::Uninstall)
 	{
+		if (actionToPerform == SteamAction::Run && appState != k_EAppStateFullyInstalled)
+		{
+			std::cout << "App is not installed" << std::endl;
+			return 0;
+		}
+
+		if (actionToPerform == SteamAction::Install && appState == k_EAppStateFullyInstalled)
+		{
+			std::cout << "App is already installed" << std::endl;
+			return 0;
+		}
+
 		if (!GClientContext()->ClientUser()->BHasCachedCredentials(username.c_str()))
 		{
 			std::cout << "Enter password: ";
@@ -128,7 +174,7 @@ int main(int argc, char* argv[])
 		else
 		{
 			std::cout << "App is not installed" << std::endl;
-			running = false;
+			return 0;
 		}
 	}
 
@@ -204,30 +250,15 @@ int main(int argc, char* argv[])
 					{
 						case SteamAction::Install:
 						{
-							if (appState != k_EAppStateFullyInstalled)
-							{
-								std::cout << "Downloading AppID " << appIDToUse << std::endl;
-								GClientContext()->ClientAppManager()->InstallApp(appIDToUse, 0, false); // installing to first library folder
-							}
-							else
-							{
-								std::cout << "App is already installed" << std::endl;
-								running = false;
-							}
+							std::cout << "Downloading AppID " << appIDToUse << std::endl;
+							GClientContext()->ClientAppManager()->InstallApp(appIDToUse, 0, false); // installing to first library folder
 						}
 						break;
 						case SteamAction::Run:
 						{
-							if (appState == k_EAppStateFullyInstalled)
-							{
-								std::cout << "Launching AppID " << appIDToUse << std::endl;
-								GClientContext()->ClientAppManager()->LaunchApp(CGameID(appIDToUse), 0, 100, ""); // ( ELaunchSource == 100 == new library details page (?))
-							}
-							else
-							{
-								std::cout << "App is not installed" << std::endl;
-								running = false;
-							}
+							std::cout << "Launching AppID " << appIDToUse << std::endl;
+							GClientContext()->ClientRemoteStorage()->LoadLocalFileInfoCache(appIDToUse);
+							GClientContext()->ClientAppManager()->LaunchApp(CGameID(appIDToUse), 0, 100, ""); // ( ELaunchSource == 100 == new library details page (?))
 						}
 						break;
 					}
