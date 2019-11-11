@@ -178,6 +178,8 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	int32 overlayEnabled = 0;
+
 	while (running)
 	{
 		CallbackMsg_t msg;
@@ -257,6 +259,17 @@ int main(int argc, char* argv[])
 						case SteamAction::Run:
 						{
 							std::cout << "Launching AppID " << appIDToUse << std::endl;
+							
+							
+							if (GClientContext()->ClientUser()->GetConfigInt(k_ERegistrySubTreeSystem, "EnableGameOverlay", &overlayEnabled))
+							{
+								if (overlayEnabled)
+								{
+									std::cout << "Disabling steam overlay" << std::endl;
+									GClientContext()->ClientUser()->SetConfigInt(k_ERegistrySubTreeSystem, "EnableGameOverlay", 0);
+								}
+							}
+							
 							GClientContext()->ClientRemoteStorage()->LoadLocalFileInfoCache(appIDToUse);
 							GClientContext()->ClientAppManager()->LaunchApp(CGameID(appIDToUse), 0, 100, ""); // ( ELaunchSource == 100 == new library details page (?))
 						}
@@ -288,6 +301,15 @@ int main(int argc, char* argv[])
 								 stateChangeCb->m_eNewState == k_EAppStateUninstalled 
 							)
 							{
+								if (actionToPerform == SteamAction::Run)
+								{
+									if (overlayEnabled)
+									{
+										std::cout << "Restoring steam overlay enabled state" << std::endl;
+										GClientContext()->ClientUser()->SetConfigInt(k_ERegistrySubTreeSystem, "EnableGameOverlay", 1);
+									}
+								}
+
 								std::cout << std::endl << "Done" << std::endl;
 								running = false;
 							}
