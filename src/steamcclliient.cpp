@@ -5,6 +5,28 @@
 
 std::string settingsPath = "./settings.json";
 
+bool runInstallScript(AppId_t appID, bool bUninstall)
+{
+	std::cout << "Running app install script..." << std::endl;
+
+	bool res = false;
+	char* appLang = new char[128];
+	GClientContext()->ClientAppManager()->GetAppConfigValue(appID, "language", appLang, 128);
+	res = GClientContext()->ClientUser()->RunInstallScript(appID, appLang, bUninstall);
+	delete[] appLang;
+
+	while (GClientContext()->ClientUser()->IsInstallScriptRunning())
+	{
+#ifdef _WIN32
+		Sleep(300);
+#else
+		usleep(100000);
+#endif
+	}
+
+	return res;
+}
+
 int main(int argc, char* argv[])
 {
 	std::vector<AppId_t> accountApps;
@@ -126,8 +148,6 @@ int main(int argc, char* argv[])
 
 	EAppState appState = GClientContext()->ClientAppManager()->GetAppInstallState(appIDToUse);
 
-	bool running = true;
-
 	// looks like steam apps can be uninstalled without logging in to steam account
 	// also no need to log in if app is not installed
 	if (actionToPerform != SteamAction::Uninstall)
@@ -168,6 +188,8 @@ int main(int argc, char* argv[])
 			appState != k_EAppStateUninstalled
 		)
 		{
+			runInstallScript(appIDToUse, true);
+
 			std::cout << "Uninstalling AppID " << appIDToUse << std::endl;
 			GClientContext()->ClientAppManager()->UninstallApp(appIDToUse, false);
 		}
@@ -179,6 +201,7 @@ int main(int argc, char* argv[])
 	}
 
 	int32 overlayEnabled = 0;
+	bool running = true;
 
 	while (running)
 	{
@@ -258,8 +281,9 @@ int main(int argc, char* argv[])
 						break;
 						case SteamAction::Run:
 						{
+							runInstallScript(appIDToUse, false);
+
 							std::cout << "Launching AppID " << appIDToUse << std::endl;
-							
 							
 							if (GClientContext()->ClientUser()->GetConfigInt(k_ERegistrySubTreeSystem, "EnableGameOverlay", &overlayEnabled))
 							{
@@ -310,7 +334,8 @@ int main(int argc, char* argv[])
 									}
 								}
 
-								std::cout << std::endl << "Done" << std::endl;
+								std::cout << "Done" << std::endl;
+
 								running = false;
 							}
 						}
