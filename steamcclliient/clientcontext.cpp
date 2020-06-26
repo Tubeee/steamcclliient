@@ -1,15 +1,15 @@
 #include "clientcontext.h"
 
-SteamClientContext::SteamClientContext(): 
-m_pClientApps(nullptr),
-m_pClientAppManager(nullptr),
-m_pClientUtils(nullptr),
-m_pClientUser(nullptr),
-m_pClientEngine(nullptr),
-m_pClientRemoteStorage(nullptr),
-m_hPipe(0),
-m_hUser(0),
-m_bInitialized(false)
+SteamClientContext::SteamClientContext() :
+	m_pClientApps(nullptr),
+	m_pClientAppManager(nullptr),
+	m_pClientUtils(nullptr),
+	m_pClientUser(nullptr),
+	m_pClientEngine(nullptr),
+	m_pClientRemoteStorage(nullptr),
+	m_hPipe(0),
+	m_hUser(0),
+	m_bInitialized(false)
 {
 }
 
@@ -66,7 +66,7 @@ bool SteamClientContext::Init()
 	}
 
 	m_pClientAppManager = (IClientAppManager*)m_pClientEngine->GetIClientAppManager(m_hUser, m_hPipe);
-	if(!m_pClientAppManager)
+	if (!m_pClientAppManager)
 	{
 		return false;
 	}
@@ -79,6 +79,18 @@ bool SteamClientContext::Init()
 
 	m_pClientRemoteStorage = (IClientRemoteStorage*)m_pClientEngine->GetIClientRemoteStorage(m_hUser, m_hPipe);
 	if (!m_pClientRemoteStorage)
+	{
+		return false;
+	}
+
+	m_pClientSortcuts = (IClientShortcuts*)m_pClientEngine->GetIClientShortcuts(m_hUser, m_hPipe);
+	if (!m_pClientSortcuts)
+	{
+		return false;
+	}
+
+	m_pClientBilling = (IClientBilling*)m_pClientEngine->GetIClientBilling(m_hUser, m_hPipe);
+	if(!m_pClientBilling)
 	{
 		return false;
 	}
@@ -111,6 +123,16 @@ IClientUser* SteamClientContext::ClientUser()
 IClientRemoteStorage* SteamClientContext::ClientRemoteStorage()
 {
 	return m_pClientRemoteStorage;
+}
+
+IClientShortcuts* SteamClientContext::ClientSortcuts()
+{
+	return m_pClientSortcuts;
+}
+
+IClientBilling* SteamClientContext::ClientBilling()
+{
+	return m_pClientBilling;
 }
 
 void SteamClientContext::RunCallbacks()
