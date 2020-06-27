@@ -255,7 +255,7 @@ void ClientInstallAppCommand::OnAppEventStateChanged(AppEventStateChange_t* cbSt
     if (cbStateChanged->m_eAppError != k_EAppUpdateErrorNoError)
     {
         m_finished = true;
-        printf("App install error: %d\n", cbStateChanged->m_eAppError);
+        printf("\nApp install error: %d\n", cbStateChanged->m_eAppError);
         return;
     }
 
@@ -276,6 +276,13 @@ ClientUninstallAppCommand::ClientUninstallAppCommand(AppId_t appID):
 {
 }
 
+ClientUninstallAppCommand::ClientUninstallAppCommand(AppId_t appID, std::string user):
+    m_appID(appID),
+    m_userName(user),
+    m_stateChangedCb(this, &ClientUninstallAppCommand::OnAppEventStateChanged)
+{
+}
+
 ClientUninstallAppCommand::~ClientUninstallAppCommand()
 {
 }
@@ -289,6 +296,13 @@ void ClientUninstallAppCommand::Start()
         m_finished = true;
         printf("AppID %d is not installed!\n", m_appID);
         return;
+    }
+
+    // while actual log in is not strictly required it would be nice to set account name if possible
+    // so client config store could guess our steamid and avoid creating crash dump on assert
+    if (!m_userName.empty())
+    {
+        GClientContext()->ClientUser()->SetAccountNameForCachedCredentialLogin(m_userName.c_str(), false);
     }
 
     GClientContext()->ClientAppManager()->UninstallApp(m_appID, false);

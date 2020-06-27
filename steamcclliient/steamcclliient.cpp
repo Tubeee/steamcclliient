@@ -111,7 +111,7 @@ int main(int argc, char* argv[])
 				return 0;
 			}
 
-			cmdManager.QueCommand(new ClientUninstallAppCommand(appIDToUse));
+			cmdManager.QueCommand(new ClientUninstallAppCommand(appIDToUse, loginUser));
 		}
 		else
 		{

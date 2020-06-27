@@ -101,12 +101,14 @@ class ClientUninstallAppCommand : public ClientCommandBase
 {
 public: 
     ClientUninstallAppCommand(AppId_t appID);
+    ClientUninstallAppCommand(AppId_t appID, std::string user);
     ~ClientUninstallAppCommand();
 
     void Start();
 
 private:
     AppId_t m_appID;
+    std::string m_userName;
 
     STEAM_CALLBACK(ClientUninstallAppCommand, OnAppEventStateChanged, AppEventStateChange_t, m_stateChangedCb);
 };

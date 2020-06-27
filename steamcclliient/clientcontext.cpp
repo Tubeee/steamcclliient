@@ -21,6 +21,10 @@ SteamClientContext::~SteamClientContext()
 		{
 			if (m_hUser)
 			{
+				if (m_pClientUser->BLoggedOn())
+				{
+					m_pClientUser->LogOff();
+				}
 				m_pClientEngine->ReleaseUser(m_hPipe, m_hUser);
 			}
 			m_pClientEngine->BReleaseSteamPipe(m_hPipe);
