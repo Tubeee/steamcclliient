@@ -333,11 +333,17 @@ void ClientLaunchGameCommand::Start()
 {
     m_started = true;
 
-    if (GClientContext()->ClientAppManager()->GetAppInstallState(m_appID) != k_EAppStateFullyInstalled)
+    EAppState state = GClientContext()->ClientAppManager()->GetAppInstallState(m_appID);
+    if (!(state & k_EAppStateFullyInstalled))
     {
         m_finished = true;
-        printf("AppID %d is not installed!\n", m_appID);
+        printf("AppID %d is not fully installed! ( EAppState: %d )\n", m_appID, state);
         return;
+    }
+
+    if (state & k_EAppStateUpdateRequired)
+    {
+        printf("AppID %d update required! Will attempt to start app anyway...\n", m_appID);
     }
 
     GClientContext()->ClientUser()->GetConfigInt(k_ERegistrySubTreeSystem, "EnableGameOverlay", &m_overlayEnabledOriginal);
@@ -384,7 +390,7 @@ void ClientLaunchGameCommand::OnAppEventStateChanged(AppEventStateChange_t* cbSt
         return;
     }
 
-    if (cbStateChanged->m_eNewState == k_EAppStateFullyInstalled)
+    if (!(cbStateChanged->m_eNewState & k_EAppStateAppRunning))
     {
         ResotreGameOverlay();
 
@@ -407,5 +413,10 @@ void ClientLaunchGameCommand::OnAppLaunchResult(AppLaunchResult_t* cbLaunchResul
     if (!m_started || cbLaunchResult->m_GameID != CGameID(m_appID))
     {
         return;
+    }
+
+    if (cbLaunchResult->m_eAppError != k_EAppUpdateErrorNoError)
+    {
+        printf("Could not start AppId %d ! ( AppError: %d Additional details: \"%s\" )\n", m_appID, cbLaunchResult->m_eAppError, cbLaunchResult->m_szErrorDetail);
     }
 }
