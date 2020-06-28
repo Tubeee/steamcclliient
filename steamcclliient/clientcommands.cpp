@@ -333,7 +333,6 @@ void ClientUninstallAppCommand::OnAppEventStateChanged(AppEventStateChange_t* cb
 // app launch command
 ClientLaunchGameCommand::ClientLaunchGameCommand(AppId_t appID):
     m_appID(appID),
-    m_overlayEnabledOriginal(1),
     m_stateChangedCb(this, &ClientLaunchGameCommand::OnAppEventStateChanged),
     m_launchResultCb(this, &ClientLaunchGameCommand::OnAppLaunchResult)
 {
@@ -360,10 +359,6 @@ void ClientLaunchGameCommand::Start()
         printf("AppID %d update required! Will attempt to start app anyway...\n", m_appID);
     }
 
-    GClientContext()->ClientUser()->GetConfigInt(k_ERegistrySubTreeSystem, "EnableGameOverlay", &m_overlayEnabledOriginal);
-    GClientContext()->ClientUser()->SetConfigInt(k_ERegistrySubTreeSystem, "EnableGameOverlay", 0);
-    std::cout << "Steam in-game overlay disabled..." << std::endl;
-
     // should install app deps ... if it's implemented correctly 
     RunInstallScript(m_appID, false);
 
@@ -381,14 +376,6 @@ void ClientLaunchGameCommand::Start()
     GClientContext()->ClientAppManager()->LaunchApp(CGameID(m_appID), 0, 100, "");
 }
 
-void ClientLaunchGameCommand::ResotreGameOverlay()
-{
-    if (GClientContext()->ClientUser()->SetConfigInt(k_ERegistrySubTreeSystem, "EnableGameOverlay", m_overlayEnabledOriginal))
-    {
-        std::cout << "Steam in-game overlay restored..." << std::endl;
-    }
-}
-
 void ClientLaunchGameCommand::OnAppEventStateChanged(AppEventStateChange_t* cbStateChanged)
 {
     if (cbStateChanged->m_nAppID != m_appID || !m_started)
@@ -398,7 +385,6 @@ void ClientLaunchGameCommand::OnAppEventStateChanged(AppEventStateChange_t* cbSt
 
     if (cbStateChanged->m_eAppError != k_EAppUpdateErrorNoError)
     {
-        ResotreGameOverlay();
         printf("Could not launch AppID %d ( Error: %d )\n", m_appID, cbStateChanged->m_eAppError);
         m_finished = true;
         return;
@@ -406,8 +392,6 @@ void ClientLaunchGameCommand::OnAppEventStateChanged(AppEventStateChange_t* cbSt
 
     if (!(cbStateChanged->m_eNewState & k_EAppStateAppRunning))
     {
-        ResotreGameOverlay();
-
         // do cloud sync on app exit. This is probably implemented incorrectly here.
         if (GClientContext()->ClientRemoteStorage()->IsCloudEnabledForAccount())
         {
@@ -432,5 +416,6 @@ void ClientLaunchGameCommand::OnAppLaunchResult(AppLaunchResult_t* cbLaunchResul
     if (cbLaunchResult->m_eAppError != k_EAppUpdateErrorNoError)
     {
         printf("Could not start AppId %d ! ( AppError: %d Additional details: \"%s\" )\n", m_appID, cbLaunchResult->m_eAppError, cbLaunchResult->m_szErrorDetail);
+        m_finished = true;
     }
 }

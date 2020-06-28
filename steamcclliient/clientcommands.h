@@ -71,7 +71,6 @@ private:
     void ResotreGameOverlay();
 
     AppId_t m_appID;
-    int32 m_overlayEnabledOriginal;
 
     STEAM_CALLBACK(ClientLaunchGameCommand, OnAppEventStateChanged, AppEventStateChange_t, m_stateChangedCb);
     STEAM_CALLBACK(ClientLaunchGameCommand, OnAppLaunchResult, AppLaunchResult_t, m_launchResultCb);
