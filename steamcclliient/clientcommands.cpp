@@ -373,7 +373,19 @@ void ClientLaunchGameCommand::Start()
         }
     }
 
-    GClientContext()->ClientAppManager()->LaunchApp(CGameID(m_appID), 0, 100, "");
+    uint32 appLaunchOpts[16];
+    uint32 numOpts = GClientContext()->ClientApps()->GetAvailableLaunchOptions(m_appID, appLaunchOpts, sizeof(appLaunchOpts));
+    if (numOpts > 0)
+    {
+        // just launch first one for now until selector is implemented
+        GClientContext()->ClientAppManager()->LaunchApp(CGameID(m_appID), appLaunchOpts[0], 100, "");
+    }
+    else
+    {
+        printf("No launch opts available for current platform for AppID %d!\n", m_appID);
+        m_finished = true;
+    }
+
 }
 
 void ClientLaunchGameCommand::OnAppEventStateChanged(AppEventStateChange_t* cbStateChanged)

@@ -32,7 +32,6 @@ bool IsSteamRunning()
 	return false;
 }
 
-
 void GetAppMissingDeps(AppId_t appID, std::vector<AppId_t>* deps)
 {
 	uint32 depCount = GClientContext()->ClientAppManager()->GetAppDependencies(appID, NULL, 0);
@@ -71,7 +70,6 @@ bool RunInstallScript(AppId_t appID, bool bUninstall)
 
 	return res;
 }
-
 
 std::string GetSteamAutoLoginUser()
 {
@@ -125,6 +123,42 @@ bool SetSteamAutoLoginUser(std::string user)
 	return false;
 }
 
+typedef NTSTATUS (WINAPI *pRtlGetVersion)(PRTL_OSVERSIONINFOW);
+EOSType GetOsType()
+{
+	HMODULE hNtdll = GetModuleHandleA("ntdll.dll");
+	if (hNtdll != NULL) 
+	{
+		pRtlGetVersion rtlGetVersion = (pRtlGetVersion)GetProcAddress(hNtdll, "RtlGetVersion");
+		if (rtlGetVersion != NULL)
+		{
+			OSVERSIONINFOW osVersion;
+			rtlGetVersion(&osVersion);
+
+			// just 4 major desktop versions
+			if (osVersion.dwMajorVersion == 6 && osVersion.dwMinorVersion == 1)
+			{
+				return k_EOSTypeWin7;
+			}
+			else if (osVersion.dwMajorVersion == 6 && osVersion.dwMinorVersion == 2)
+			{
+				return k_EOSTypeWin8;
+			}
+			else if (osVersion.dwMajorVersion == 6 && osVersion.dwMinorVersion == 3)
+			{
+				return k_EOSTypeWin81;
+			}
+			else if (osVersion.dwMajorVersion == 10 && osVersion.dwMinorVersion == 0)
+			{
+				return k_EOSTypeWin10;
+			}
+		}
+	}
+
+	// ruturn sane win version as fallback
+	return k_EOSTypeWin7;
+}
+
 std::string GetSteamInstallPath()
 {
 	std::string ownPath = GetSelfPath();
@@ -138,8 +172,6 @@ std::string GetSteamInstallPath()
 	}
 	return std::string();
 }
-
-
 
 void ChangeCurrentWorkDir(std::string newDir)
 {
