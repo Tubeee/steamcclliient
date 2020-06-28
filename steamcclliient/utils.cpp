@@ -1,34 +1,10 @@
 #include <iostream>
 #include <windows.h>
 #include <vector>
+#include <direct.h>
 #include "clientcontext.h"
 #include "utils.h"
 
-
-void ShowDownloadProgress(uint64_t bytesDownloaded, uint64_t bytesToDownload)
-{
-	float donloadProgress = (float)bytesDownloaded / (float)bytesToDownload;
-	int progressWidth = 50;
-	int progress = progressWidth * donloadProgress;
-
-	std::cout << "[";
-	for (int i = 0; i < progressWidth; ++i)
-	{
-		if (i < progress)
-		{
-			std::cout << "=";
-		}
-		else if (i == progress)
-		{
-			std::cout << ">";
-		}
-		else
-		{
-			std::cout << " ";
-		}
-	}
-	std::cout << "] " << int(donloadProgress * 100.0) << "%\r";
-}
 
 bool IsSteamRunning()
 {
@@ -133,8 +109,6 @@ bool SetSteamProtocolHandler()
 	return false;
 }
 
-
-
 bool SetSteamAutoLoginUser(std::string user)
 {
 	HKEY hKey;
@@ -149,6 +123,55 @@ bool SetSteamAutoLoginUser(std::string user)
 	}
 
 	return false;
+}
+
+std::string GetSteamInstallPath()
+{
+	std::string ownPath = GetSelfPath();
+	if (!ownPath.empty())
+	{
+		size_t endPos = ownPath.find_last_of("\\");
+		if (endPos != std::string::npos)
+		{
+			return ownPath.substr(0, endPos + 1);
+		}
+	}
+	return std::string();
+}
+
+
+
+void ChangeCurrentWorkDir(std::string newDir)
+{
+	if (!newDir.empty())
+	{
+		_chdir(newDir.c_str());
+	}
+}
+
+void ShowDownloadProgress(uint64_t bytesDownloaded, uint64_t bytesToDownload)
+{
+	float donloadProgress = (float)bytesDownloaded / (float)bytesToDownload;
+	int progressWidth = 50;
+	int progress = progressWidth * donloadProgress;
+
+	std::cout << "[";
+	for (int i = 0; i < progressWidth; ++i)
+	{
+		if (i < progress)
+		{
+			std::cout << "=";
+		}
+		else if (i == progress)
+		{
+			std::cout << ">";
+		}
+		else
+		{
+			std::cout << " ";
+		}
+	}
+	std::cout << "] " << int(donloadProgress * 100.0) << "%\r";
 }
 
 std::string GetSelfPath()

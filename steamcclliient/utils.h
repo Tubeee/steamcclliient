@@ -11,5 +11,7 @@ std::string GetSelfPath();
 bool SetSteamProtocolHandler();
 std::string GetSteamAutoLoginUser();
 bool SetSteamAutoLoginUser(std::string user);
+void ChangeCurrentWorkDir(std::string newDir);
+std::string GetSteamInstallPath();
 
 #endif // UTILS_H

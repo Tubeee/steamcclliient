@@ -24,7 +24,9 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-	SetSteamProtocolHandler();
+	// required for some games install scripts to work when using 
+	// launchers like Playnite
+	ChangeCurrentWorkDir(GetSteamInstallPath());
 
 	ClientCommandManager cmdManager;
 	std::string loginUser = GetSteamAutoLoginUser();
