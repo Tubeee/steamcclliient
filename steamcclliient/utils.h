@@ -73,6 +73,7 @@ enum EOSType
     k_EOSTypeWin2016, // win2016
 };
 
+int32 PromptLaunchOptions(AppId_t appID, uint32* opts, int32 optsSize);
 void ShowDownloadProgress(uint64_t bytesToDownload, uint64_t bytesDownloaded);
 bool IsSteamRunning();
 void GetAppMissingDeps(AppId_t appID, std::vector<AppId_t>* deps);

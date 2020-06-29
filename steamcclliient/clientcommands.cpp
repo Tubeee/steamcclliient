@@ -377,8 +377,17 @@ void ClientLaunchGameCommand::Start()
     uint32 numOpts = GClientContext()->ClientApps()->GetAvailableLaunchOptions(m_appID, appLaunchOpts, sizeof(appLaunchOpts));
     if (numOpts > 0)
     {
-        // just launch first one for now until selector is implemented
-        GClientContext()->ClientAppManager()->LaunchApp(CGameID(m_appID), appLaunchOpts[0], 100, "");
+        int optToUse = appLaunchOpts[0];
+        if (numOpts > 1)
+        {
+            int userChoice = PromptLaunchOptions(m_appID, appLaunchOpts, numOpts);
+            if (userChoice != -1)
+            {
+                optToUse = userChoice;
+            }
+        }
+
+        GClientContext()->ClientAppManager()->LaunchApp(CGameID(m_appID), optToUse, 100, "");
     }
     else
     {

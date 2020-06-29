@@ -5,7 +5,6 @@
 #include "clientcontext.h"
 #include "utils.h"
 
-
 bool IsSteamRunning()
 {
 	int steamPID = 0;
@@ -211,4 +210,28 @@ std::string GetSelfPath()
 	char buf[260] = { '\0' };
 	GetModuleFileName(NULL, buf, sizeof(buf));
 	return std::string(buf);
+}
+
+int32 PromptLaunchOptions(AppId_t appID, uint32* opts, int32 optsSize)
+{
+	std::cout << "Chose launch option:" << std::endl;
+	for (int i = 0; i < optsSize; ++i)
+	{
+		// FIXME: Should read config section instead and parse it as binary vdf
+		char description[256] = { '\0' };
+		char key[32] = { '\0' };
+		sprintf(key, "config/launch/%d/description", opts[i]);
+		if (GClientContext()->ClientApps()->GetAppData(appID, key, description, sizeof(description)))
+		{
+			printf("%d. %s\n", i, description);
+		}
+	}
+	int32 launchOpt = 0;
+	std::cout << "Your choice: ";
+	std::cin >> launchOpt;
+	if (!std::cin)
+	{
+		return -1;
+	}
+	return launchOpt;
 }
