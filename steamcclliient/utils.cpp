@@ -2,6 +2,8 @@
 #include <windows.h>
 #include <vector>
 #include <direct.h>
+#include <map>
+#include <string>
 #include "clientcontext.h"
 #include "utils.h"
 
@@ -52,15 +54,104 @@ void GetAppMissingDeps(AppId_t appID, std::vector<AppId_t>* deps)
 	}
 }
 
+int32 GetAppLaunchOption(AppId_t appIDToUse)
+{
+	uint32 appLaunchOpts[16];
+	uint32 numOpts = GClientContext()->ClientApps()->GetAvailableLaunchOptions(appIDToUse, appLaunchOpts, sizeof(appLaunchOpts));
+	int32 optToUse = appLaunchOpts[0];
+	if (numOpts > 1)
+	{
+		std::map<int32, std::string> launchOptions;
+		for (int i = 0; i < numOpts; ++i)
+		{
+			// FIXME: Should read config section instead and parse it as binary vdf
+			char description[256] = { '\0' };
+			char key[32] = { '\0' };
+			sprintf(key, "config/launch/%d/description", appLaunchOpts[i]);
+			if (GClientContext()->ClientApps()->GetAppData(appIDToUse, key, description, sizeof(description)))
+			{
+				launchOptions[appLaunchOpts[i]] = std::string(description);
+			}
+		}
+
+		int32 userChoice = PromptChooseSingleInt("Chose launch option", launchOptions);
+		if (userChoice != -1)
+		{
+			optToUse = userChoice;
+		}
+	}
+	return optToUse;
+}
+
+void SelectDLC(AppId_t appID)
+{
+	int32 dlcCount = GClientContext()->ClientApps()->GetDLCCount(appID);
+	std::map<int32, std::string> dlcSelectMap;
+
+	AppId_t dlcId = 0;
+	bool bAvail = false;
+	char name[128] = { '\0' };
+	for (int32 i = 0; i < dlcCount; ++i)
+	{
+		GClientContext()->ClientApps()->BGetDLCDataByIndex(appID, i, &dlcId, &bAvail, name, sizeof(name));
+		if (bAvail)
+		{
+			GClientContext()->ClientAppManager()->SetDlcEnabled(appID, dlcId, false);
+			dlcSelectMap[dlcId] = std::string(name);
+		}
+	}
+
+	if (dlcSelectMap.size() == 0)
+	{
+		return;
+	}
+
+	dlcSelectMap[0] = "None";
+
+	std::vector<int32> dlcSelected = PromptChooseMultiInt("Select DLC to be installed", dlcSelectMap);
+	if (std::find(dlcSelected.cbegin(), dlcSelected.cend(), 0) != dlcSelected.cend())
+	{
+		return;
+	}
+
+	for (auto it = dlcSelected.cbegin(); it != dlcSelected.cend(); ++it)
+	{
+		GClientContext()->ClientAppManager()->SetDlcEnabled(appID, *it, true);
+	}
+}
+
+int32 SelectInstallFolder()
+{
+	int32 installFolderSelected = 0;
+	int32 numFolders = GClientContext()->ClientAppManager()->GetNumInstallBaseFolders();
+	if (numFolders > 1)
+	{
+		std::map<int32, std::string> folders;
+		char folderName[256] = { '\0' };
+		for (int32 i = 0; i < numFolders; ++i)
+		{
+			GClientContext()->ClientAppManager()->GetInstallBaseFolder(i, folderName, sizeof(folderName));
+			folders[i] = std::string(folderName);
+		}
+
+		installFolderSelected = PromptChooseSingleInt("Select steam library folder to use", folders);
+		if (installFolderSelected == -1)
+		{
+			installFolderSelected = 0;
+		}
+	}
+
+	return installFolderSelected;
+}
+
 bool RunInstallScript(AppId_t appID, bool bUninstall)
 {
 	std::cout << "Running app install script..." << std::endl;
 
 	bool res = false;
-	char* appLang = new char[128];
-	GClientContext()->ClientAppManager()->GetAppConfigValue(appID, "language", appLang, 128);
+	char appLang[128];
+	GClientContext()->ClientAppManager()->GetAppConfigValue(appID, "language", appLang, sizeof(appLang));
 	res = GClientContext()->ClientUser()->RunInstallScript(appID, appLang, bUninstall);
-	delete[] appLang;
 
 	while (GClientContext()->ClientUser()->IsInstallScriptRunning())
 	{
@@ -180,9 +271,9 @@ void ChangeCurrentWorkDir(std::string newDir)
 	}
 }
 
-void ShowDownloadProgress(uint64_t bytesDownloaded, uint64_t bytesToDownload)
+void ShowProgress(uint64_t current, uint64_t total)
 {
-	float donloadProgress = (float)bytesDownloaded / (float)bytesToDownload;
+	float donloadProgress = (float)current / (float)total;
 	int progressWidth = 50;
 	int progress = progressWidth * donloadProgress;
 
@@ -212,26 +303,71 @@ std::string GetSelfPath()
 	return std::string(buf);
 }
 
-int32 PromptLaunchOptions(AppId_t appID, uint32* opts, int32 optsSize)
+void PrintOpts(std::string title, std::string prompt, std::map<int32, std::string> &variants)
 {
-	std::cout << "Chose launch option:" << std::endl;
-	for (int i = 0; i < optsSize; ++i)
+	std::cout << title << std::endl;
+	for (auto it = variants.cbegin(); it != variants.cend(); ++it)
 	{
-		// FIXME: Should read config section instead and parse it as binary vdf
-		char description[256] = { '\0' };
-		char key[32] = { '\0' };
-		sprintf(key, "config/launch/%d/description", opts[i]);
-		if (GClientContext()->ClientApps()->GetAppData(appID, key, description, sizeof(description)))
+		printf("  %d. %s\n", (*it).first, (*it).second.c_str());
+	}
+	std::cout << prompt;
+}
+
+std::vector<int32> PromptChooseMultiInt(std::string title, std::map<int32, std::string> &variants)
+{
+	PrintOpts(title, "Your choice (separated by ,): ", variants);
+
+	std::vector<int> userChoice;
+	std::string choice;
+	std::cin >> choice;
+	if (std::cin)
+	{
+		size_t delimPos = 0, delimOld = 0;
+		while (delimPos != std::string::npos)
 		{
-			printf("%d. %s\n", i, description);
+			delimPos = choice.find_first_of(',', delimOld);
+			int32 singleChoice = std::stoi(choice.substr(delimOld, delimPos - delimOld));
+			delimOld = delimPos + 1;
+
+			if (variants.find(singleChoice) != variants.cend())
+			{
+				userChoice.push_back(singleChoice);
+			}
 		}
 	}
-	int32 launchOpt = 0;
-	std::cout << "Your choice: ";
-	std::cin >> launchOpt;
-	if (!std::cin)
+	
+	std::cout << std::endl;
+
+	return userChoice;
+}
+
+int32 PromptChooseSingleInt(std::string title, std::map<int32, std::string> &variants)
+{
+	PrintOpts(title, "Your choice: ", variants);
+
+	int32 userChoice = -1;
+	std::cin >> userChoice;
+	if (!std::cin || variants.find(userChoice) == variants.cend())
 	{
 		return -1;
 	}
-	return launchOpt;
+
+	std::cout << std::endl;
+
+	return userChoice;
+}
+
+bool PromptYN(std::string prompt)
+{
+	std::cout << prompt << " [y/n]: ";
+	char choice = 0;
+	std::cin >> choice;
+	if (!std::cin || (choice != 'Y' && choice != 'y'))
+	{
+		return false;
+	}
+
+	std::cout << std::endl;
+
+	return true;
 }

@@ -163,7 +163,16 @@ void ClientLogOnCommand::OnLogOnFailed(SteamServerConnectFailure_t *cbMsg)
 }
 
 // app install command
-ClientInstallAppCommand::ClientInstallAppCommand(AppId_t appID): 
+ClientInstallAppCommand::ClientInstallAppCommand(AppId_t appID, int32 iFolder) :
+    m_appID(appID),
+    m_installFolder(iFolder),
+    m_appUpdateProgressCb(this, &ClientInstallAppCommand::OnAppUpdateProgress),
+    m_stateChangedCb(this, &ClientInstallAppCommand::OnAppEventStateChanged),
+    m_steamDisconnectedCb(this, &ClientInstallAppCommand::OnDisconnected)
+{
+}
+
+ClientInstallAppCommand::ClientInstallAppCommand(AppId_t appID):
     m_appID(appID),
     m_appUpdateProgressCb(this, &ClientInstallAppCommand::OnAppUpdateProgress),
     m_stateChangedCb(this, &ClientInstallAppCommand::OnAppEventStateChanged),
@@ -195,6 +204,13 @@ void ClientInstallAppCommand::Start()
         return;
     }
 
+    if (m_installFolder == -1)
+    {
+        m_installFolder = SelectInstallFolder();
+    }
+
+    SelectDLC(m_appID);
+
     if (!GClientContext()->ClientUser()->BIsSubscribedApp(m_appID))
     {
         SteamAPICall_t hCall = GClientContext()->ClientBilling()->RequestFreeLicenseForApps(&m_appID, 1);
@@ -203,7 +219,7 @@ void ClientInstallAppCommand::Start()
         return;
     }
 
-    GClientContext()->ClientAppManager()->InstallApp(m_appID, 0, false);
+    GClientContext()->ClientAppManager()->InstallApp(m_appID, m_installFolder, false);
 }
 
 void ClientInstallAppCommand::OnDisconnected(SteamServersDisconnected_t* cbDisconnected)
@@ -227,7 +243,8 @@ void ClientInstallAppCommand::OnRequestFreeLicenseResult(RequestFreeLicenseRespo
     }
 
     printf("Installing AppID %d\n", m_appID);
-    GClientContext()->ClientAppManager()->InstallApp(m_appID, 0, false);
+
+    GClientContext()->ClientAppManager()->InstallApp(m_appID, m_installFolder, false);
 }
 
 void ClientInstallAppCommand::OnAppUpdateProgress(AppUpdateProgress_t* cbProgress)
@@ -241,7 +258,7 @@ void ClientInstallAppCommand::OnAppUpdateProgress(AppUpdateProgress_t* cbProgres
     {
         AppUpdateInfo_s appUpdate;
         GClientContext()->ClientAppManager()->GetUpdateInfo(m_appID, &appUpdate);
-        ShowDownloadProgress(appUpdate.m_unBytesDownloaded, appUpdate.m_unBytesToDownload);
+        ShowProgress(appUpdate.m_unBytesDownloaded, appUpdate.m_unBytesToDownload);
     }
 }
 
@@ -263,7 +280,7 @@ void ClientInstallAppCommand::OnAppEventStateChanged(AppEventStateChange_t* cbSt
     {
         m_finished = true;
         // just an ugly hack until better progress implemented
-        ShowDownloadProgress(100, 100);
+        ShowProgress(100, 100);
 
         std::cout << std::endl << "App fully installed!" << std::endl;
     }
@@ -373,28 +390,7 @@ void ClientLaunchGameCommand::Start()
         }
     }
 
-    uint32 appLaunchOpts[16];
-    uint32 numOpts = GClientContext()->ClientApps()->GetAvailableLaunchOptions(m_appID, appLaunchOpts, sizeof(appLaunchOpts));
-    if (numOpts > 0)
-    {
-        int optToUse = appLaunchOpts[0];
-        if (numOpts > 1)
-        {
-            int userChoice = PromptLaunchOptions(m_appID, appLaunchOpts, numOpts);
-            if (userChoice != -1)
-            {
-                optToUse = userChoice;
-            }
-        }
-
-        GClientContext()->ClientAppManager()->LaunchApp(CGameID(m_appID), optToUse, 100, "");
-    }
-    else
-    {
-        printf("No launch opts available for current platform for AppID %d!\n", m_appID);
-        m_finished = true;
-    }
-
+    GClientContext()->ClientAppManager()->LaunchApp(CGameID(m_appID), GetAppLaunchOption(m_appID), 100, "");
 }
 
 void ClientLaunchGameCommand::OnAppEventStateChanged(AppEventStateChange_t* cbStateChanged)

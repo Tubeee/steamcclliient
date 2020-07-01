@@ -90,18 +90,18 @@ int main(int argc, char* argv[])
 				return 0;
 			}
 
+			cmdManager.QueCommand(new ClientLogOnCommand(loginUser, ""));
+			cmdManager.QueCommand(new ClientInstallAppCommand(appIDToUse));
+
 			std::vector<AppId_t> deps;
 			GetAppMissingDeps(appIDToUse, &deps);
 			if (deps.size())
 			{
 				for (auto it = deps.cbegin(); it != deps.cend(); ++it)
 				{
-					cmdManager.QueCommand(new ClientInstallAppCommand(*it));
+					cmdManager.QueCommand(new ClientInstallAppCommand(*it, 0));
 				}
 			}
-
-			cmdManager.QueCommand(new ClientLogOnCommand(loginUser, ""));
-			cmdManager.QueCommand(new ClientInstallAppCommand(appIDToUse));
 		}
 		else if (std::string(args[0]).compare("uninstall") == 0)
 		{

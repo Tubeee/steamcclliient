@@ -68,8 +68,6 @@ public:
     void Start();
 
 private:
-    void ResotreGameOverlay();
-
     AppId_t m_appID;
 
     STEAM_CALLBACK(ClientLaunchGameCommand, OnAppEventStateChanged, AppEventStateChange_t, m_stateChangedCb);
@@ -79,6 +77,7 @@ private:
 class ClientInstallAppCommand : public ClientCommandBase
 {
 public:
+    ClientInstallAppCommand(AppId_t appID, int32 iFolder);
     ClientInstallAppCommand(AppId_t appID);
     ~ClientInstallAppCommand();
 
@@ -86,14 +85,14 @@ public:
 
 private:
     AppId_t m_appID;
-    std::vector<AppId_t> m_appDeps;
+    int32 m_installFolder = -1;
+
+    void OnRequestFreeLicenseResult(RequestFreeLicenseResponse_t* pCallResult, bool IOFail);
+    CCallResult<ClientInstallAppCommand, RequestFreeLicenseResponse_t> m_requestFreeLicenseResult;
 
     STEAM_CALLBACK(ClientInstallAppCommand, OnAppEventStateChanged, AppEventStateChange_t, m_stateChangedCb);
     STEAM_CALLBACK(ClientInstallAppCommand, OnAppUpdateProgress, AppUpdateProgress_t, m_appUpdateProgressCb);
     STEAM_CALLBACK(ClientInstallAppCommand, OnDisconnected, SteamServersDisconnected_t, m_steamDisconnectedCb);
-
-    void OnRequestFreeLicenseResult(RequestFreeLicenseResponse_t* pCallResult, bool IOFail);
-    CCallResult<ClientInstallAppCommand, RequestFreeLicenseResponse_t> m_requestFreeLicenseResult;
 };
 
 class ClientUninstallAppCommand : public ClientCommandBase

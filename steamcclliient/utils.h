@@ -1,6 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <map>
 #include "Steamworks.h"
 
 enum EOSType
@@ -73,11 +74,18 @@ enum EOSType
     k_EOSTypeWin2016, // win2016
 };
 
-int32 PromptLaunchOptions(AppId_t appID, uint32* opts, int32 optsSize);
-void ShowDownloadProgress(uint64_t bytesToDownload, uint64_t bytesDownloaded);
-bool IsSteamRunning();
+int32 PromptChooseSingleInt(std::string title, std::map<int32, std::string>& variants);
+std::vector<int32> PromptChooseMultiInt(std::string title, std::map<int32, std::string>& variants);
+bool PromptYN(std::string prompt);
+void ShowProgress(uint64_t current, uint64_t total);
+
 void GetAppMissingDeps(AppId_t appID, std::vector<AppId_t>* deps);
 bool RunInstallScript(AppId_t appID, bool bUninstall);
+int32 GetAppLaunchOption(AppId_t appIDToUse);
+void SelectDLC(AppId_t appID);
+int32 SelectInstallFolder();
+
+bool IsSteamRunning();
 std::string GetSelfPath();
 bool SetSteamProtocolHandler();
 std::string GetSteamAutoLoginUser();
