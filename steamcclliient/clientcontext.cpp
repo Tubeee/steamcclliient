@@ -27,6 +27,16 @@ SteamClientContext::~SteamClientContext()
 				}
 				m_pClientEngine->ReleaseUser(m_hPipe, m_hUser);
 			}
+			
+			// release whatever resources we can...
+			Steam_ReleaseThreadLocalMemory(true);
+			// drain pipe
+			CallbackMsg_t dummy;
+			while (Steam_BGetCallback(m_hPipe, &dummy))
+			{
+				Steam_FreeLastCallback(m_hPipe);
+			}			
+			
 			m_pClientEngine->BReleaseSteamPipe(m_hPipe);
 		}
 		m_pClientEngine->BShutdownIfAllPipesClosed();
