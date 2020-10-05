@@ -12,10 +12,15 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-	if(!OpenAPI_LoadLibrary())
+	// required for some games install scripts to work when using 
+	// launchers like Playnite
+	ChangeCurrentWorkDir(GetSteamInstallPath());
+
+	// client service is required by CEG and VAC
+	// so it's better to started it first, before initializing client library and starting games
+	if (!StartSteamService())
 	{
-		std::cout << "Could not load steamclient library!" << std::endl;
-		return 0;
+		std::cout << "Could not start Steam Client Service! Some games may fail to start..." << std::endl;
 	}
 
 	if (!GClientContext()->Init())
@@ -24,11 +29,8 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
+	// register self as steam:// protocol handler
 	SetSteamProtocolHandler();
-
-	// required for some games install scripts to work when using 
-	// launchers like Playnite
-	ChangeCurrentWorkDir(GetSteamInstallPath());
 
 	ClientCommandManager cmdManager;
 	std::string loginUser = GetSteamAutoLoginUser();
@@ -65,6 +67,9 @@ int main(int argc, char* argv[])
 	{
 		if (std::string(args[0]).compare("run") == 0 || std::string(args[0]).compare("launch") == 0 || std::string(args[0]).compare("rungameid") == 0)
 		{
+			// AppID != CGameID so this is kinda wrong, but still works in most cases
+			// 
+			// TODO: Rewrite to use CGameID instead of AppId
 			AppId_t appIDToUse = 0;
 			if (args.size() > 1)
 			{
@@ -75,7 +80,32 @@ int main(int argc, char* argv[])
 				return 0;
 			}
 
+			std::vector<AppId_t> outdatedDeps;
+			GetAppMissingDeps(appIDToUse, &outdatedDeps);
+
+			// checking for k_EAppStateUpdateRequired flag should skip optional updates... in theory
+			if (outdatedDeps.size() > 0 || (GClientContext()->ClientAppManager()->GetAppInstallState(appIDToUse) & k_EAppStateUpdateRequired))
+			{
+				if (!PromptYN("App or one of its dependencies requires updating! Proceed with update?"))
+				{
+					return 0;
+				}
+			}
+
 			cmdManager.QueCommand(new ClientLogOnCommand(loginUser, ""));
+
+			for (auto it = outdatedDeps.cbegin(); it != outdatedDeps.cend(); ++it)
+			{
+				cmdManager.QueCommand(new ClientInstallAppCommand(*it, 0));
+			}
+
+			if (GClientContext()->ClientAppManager()->GetAppInstallState(appIDToUse) & k_EAppStateUpdateRequired)
+			{
+				cmdManager.QueCommand(new ClientInstallAppCommand(appIDToUse, 0));
+			}
+
+			cmdManager.QueCommand(new ClientRunAppInstallScriptCommand(appIDToUse, false));
+			cmdManager.QueCommand(new ClientGetCustomBinariesCommand(appIDToUse));
 			cmdManager.QueCommand(new ClientLaunchGameCommand(appIDToUse));
 		}
 		else if (std::string(args[0]).compare("install") == 0)
@@ -116,6 +146,7 @@ int main(int argc, char* argv[])
 			}
 
 			cmdManager.QueCommand(new ClientUninstallAppCommand(appIDToUse, loginUser));
+			cmdManager.QueCommand(new ClientRunAppInstallScriptCommand(appIDToUse, true));
 		}
 		else
 		{

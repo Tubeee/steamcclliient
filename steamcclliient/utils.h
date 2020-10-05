@@ -80,7 +80,6 @@ bool PromptYN(std::string prompt);
 void ShowProgress(uint64_t current, uint64_t total);
 
 void GetAppMissingDeps(AppId_t appID, std::vector<AppId_t>* deps);
-bool RunInstallScript(AppId_t appID, bool bUninstall);
 int32 GetAppLaunchOption(AppId_t appIDToUse);
 void SelectDLC(AppId_t appID);
 int32 SelectInstallFolder();
@@ -93,5 +92,6 @@ bool SetSteamAutoLoginUser(std::string user);
 void ChangeCurrentWorkDir(std::string newDir);
 std::string GetSteamInstallPath();
 EOSType GetOsType();
+bool StartSteamService();
 
 #endif // UTILS_H

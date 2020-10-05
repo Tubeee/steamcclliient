@@ -95,6 +95,36 @@ private:
     STEAM_CALLBACK(ClientInstallAppCommand, OnDisconnected, SteamServersDisconnected_t, m_steamDisconnectedCb);
 };
 
+
+class ClientGetCustomBinariesCommand : public ClientCommandBase
+{
+public:
+    ClientGetCustomBinariesCommand(AppId_t appID);
+    ~ClientGetCustomBinariesCommand();
+
+    void Start();
+    void Update();
+
+private:
+    AppId_t m_appID;
+
+    STEAM_CALLBACK(ClientGetCustomBinariesCommand, OnDRMResponse, DRMDataResponse_t, m_drmResponse);
+};
+
+class ClientRunAppInstallScriptCommand : public ClientCommandBase
+{
+public:
+    ClientRunAppInstallScriptCommand(AppId_t appID, bool uninstall);
+    ~ClientRunAppInstallScriptCommand();
+
+    void Start();
+    void Update();
+
+private:
+    AppId_t m_appID;
+    bool m_uninstall;
+};
+
 class ClientUninstallAppCommand : public ClientCommandBase
 {
 public: 

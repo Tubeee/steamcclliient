@@ -4,8 +4,8 @@
 cmake_minimum_required (VERSION 3.8)
 
 # Make sure to set correct paths before building...
-set(OSW_INCLUDE_PATH "\\open-steamworks\\OpenSteamworks")
-set(OSW_LIB_PATH "\\open-steamworks\\OpenSteamAPI\\lib\\Win32\\OpenSteamAPI.lib")
+set(OSW_INCLUDE_PATH "..\\..\\open-steamworks\\OpenSteamworks")
+set(OSW_LIB_PATH "..\\..\\..\\..\\open-steamworks\\OpenSteamAPI\\lib\\Win32\\OpenSteamAPI.lib")
 
 # Add source to this project's executable.
 add_executable (steamcclliient 

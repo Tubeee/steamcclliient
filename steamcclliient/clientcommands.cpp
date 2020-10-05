@@ -286,7 +286,7 @@ void ClientInstallAppCommand::OnAppEventStateChanged(AppEventStateChange_t* cbSt
     }
 }
 
-// app uninstall comman
+// app uninstall command
 ClientUninstallAppCommand::ClientUninstallAppCommand(AppId_t appID):
     m_appID(appID),
     m_stateChangedCb(this, &ClientUninstallAppCommand::OnAppEventStateChanged)
@@ -342,7 +342,6 @@ void ClientUninstallAppCommand::OnAppEventStateChanged(AppEventStateChange_t* cb
     if (cbStateChanged->m_eNewState == k_EAppStateUninstalled)
     {
         m_finished = true;
-        RunInstallScript(m_appID, true);
         std::cout << "App uninstalled!" << std::endl;
     }
 }
@@ -375,9 +374,6 @@ void ClientLaunchGameCommand::Start()
     {
         printf("AppID %d update required! Will attempt to start app anyway...\n", m_appID);
     }
-
-    // should install app deps ... if it's implemented correctly 
-    RunInstallScript(m_appID, false);
 
     // do cloud sync befor launching. This is probably implemented incorrectly here.
     if (GClientContext()->ClientRemoteStorage()->IsCloudEnabledForAccount())
@@ -435,4 +431,84 @@ void ClientLaunchGameCommand::OnAppLaunchResult(AppLaunchResult_t* cbLaunchResul
         printf("Could not start AppId %d ! ( AppError: %d Additional details: \"%s\" )\n", m_appID, cbLaunchResult->m_eAppError, cbLaunchResult->m_szErrorDetail);
         m_finished = true;
     }
+}
+
+
+// run install script command
+ClientRunAppInstallScriptCommand::ClientRunAppInstallScriptCommand(AppId_t appID, bool uninstall) :
+    m_appID(appID),
+    m_uninstall(uninstall)
+{
+}
+
+ClientRunAppInstallScriptCommand::~ClientRunAppInstallScriptCommand()
+{
+}
+
+void ClientRunAppInstallScriptCommand::Start()
+{
+    m_started = true;
+
+    if (!GClientContext()->ClientUser()->BLoggedOn() && !m_uninstall)
+    {
+        m_finished = true;
+        return;
+    }
+
+    std::cout << "Running app install script..." << std::endl;
+
+    bool res = false;
+    char appLang[128];
+    GClientContext()->ClientAppManager()->GetAppConfigValue(m_appID, "language", appLang, sizeof(appLang));
+    res = GClientContext()->ClientUser()->RunInstallScript(m_appID, appLang, m_uninstall);
+}
+
+void ClientRunAppInstallScriptCommand::Update()
+{
+    if (!GClientContext()->ClientUser()->IsInstallScriptRunning())
+    {
+        m_finished = true;
+    }
+}
+
+// get custom binaries command
+ClientGetCustomBinariesCommand::ClientGetCustomBinariesCommand(AppId_t appID): 
+    m_appID(appID),
+    m_drmResponse(this, &ClientGetCustomBinariesCommand::OnDRMResponse)
+{
+}
+
+void ClientGetCustomBinariesCommand::OnDRMResponse(DRMDataResponse_t* respCb)
+{
+    printf("Got DRMDataResponse! (EResult: %d)\n", respCb->m_EResult);
+
+    m_finished = true;
+}
+
+void ClientGetCustomBinariesCommand::Start()
+{
+    m_started = true;
+
+    if (!GClientContext()->ClientUser()->BLoggedOn())
+    {
+        m_finished = true;
+        return;
+    }
+
+    uint32 smth = 0;
+    EResult reqResult = GClientContext()->ClientUser()->RequestCustomBinaries(m_appID, false, true, &smth);
+    if (!reqResult || !smth)
+    {
+        m_finished = true;
+    }
+}
+
+void ClientGetCustomBinariesCommand::Update()
+{
+
+}
+
+ClientGetCustomBinariesCommand::~ClientGetCustomBinariesCommand()
+{
+
 }
