@@ -86,23 +86,27 @@ void ClientLogOnCommand::Start()
 {
     m_started = true;
 
-    if (m_userName.empty())
-    {
-        std::cout << "Enter username: ";
-        std::cin >> m_userName;
-    }
-
     if (GClientContext()->ClientUser()->BHasCachedCredentials(m_userName.c_str()))
     {
         GClientContext()->ClientUser()->SetAccountNameForCachedCredentialLogin(m_userName.c_str(), false);
     }
     else
     {
-        if (m_password.empty())
+        if (!m_userName.empty())
         {
+            printf("No valid saved credentials for given user name (%s) found!\n", m_userName.c_str());
+        }
+
+        if (m_userName.empty() || m_password.empty())
+        {
+            std::cout << "Enter username: ";
+            std::cin >> m_userName;
+
             std::cout << "Enter password: ";
             std::cin >> m_password;
         }
+
+        // Calling SetLoginInformation after setting second factor key will reset the key!
         GClientContext()->ClientUser()->SetLoginInformation(m_userName.c_str(), m_password.c_str(), true);
     }
 
@@ -153,6 +157,18 @@ void ClientLogOnCommand::OnLogOnFailed(SteamServerConnectFailure_t *cbMsg)
                 GClientContext()->ClientUser()->SetTwoFactorCode(authCode.c_str());
             }
             break;
+        case k_EResultInvalidPassword:
+            {
+                if (GClientContext()->ClientUser()->BHasCachedCredentials(m_userName.c_str()))
+                {
+                    std::cout << "Saved credentials expired!" << std::endl;
+                    GClientContext()->ClientUser()->DestroyCachedCredentials(m_userName.c_str());
+                }
+                else
+                {
+                    std::cout << "Wrong password!" << std::endl;
+                }
+            }
         default:
             m_finished = true;
             printf("Could not log in! ( Eresult: %d )\n", cbMsg->m_eResult);
@@ -361,6 +377,13 @@ ClientLaunchGameCommand::~ClientLaunchGameCommand()
 void ClientLaunchGameCommand::Start()
 {
     m_started = true;
+
+    if (!GClientContext()->ClientUser()->BLoggedOn())
+    {
+        m_finished = true;
+        std::cout << "Not logged in!" << std::endl;
+        return;
+    }
 
     EAppState state = GClientContext()->ClientAppManager()->GetAppInstallState(m_appID);
     if (!(state & k_EAppStateFullyInstalled))
