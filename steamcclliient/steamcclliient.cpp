@@ -148,17 +148,17 @@ int main(int argc, char* argv[])
             cmdManager.QueCommand(new ClientUninstallAppCommand(appIDToUse, loginUser));
             cmdManager.QueCommand(new ClientRunAppInstallScriptCommand(appIDToUse, true));
         }
-        else
-        {
-            std::cout << std::endl;
-            std::cout << "Usage: steamcclliient <command> <appid>" << std::endl;
-            std::cout << "  Commands are:"                         << std::endl;
-            std::cout << "    install   - to install app"          << std::endl;
-            std::cout << "    uninstall - to uninstall app"        << std::endl;
-            std::cout << "    run       - to start app"            << std::endl;
-            std::cout << std::endl;
-            return 0;
-        }
+    }
+    else
+    {
+        std::cout << std::endl;
+        std::cout << "Usage: steamcclliient <command> <appid>" << std::endl;
+        std::cout << "  Commands are:" << std::endl;
+        std::cout << "    install   - to install app" << std::endl;
+        std::cout << "    uninstall - to uninstall app" << std::endl;
+        std::cout << "    run       - to start app" << std::endl;
+        std::cout << std::endl;
+        return 0;
     }
 
     bool running = true;

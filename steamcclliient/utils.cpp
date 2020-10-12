@@ -266,15 +266,15 @@ bool StartSteamService()
     //
     // TODO: Reimplement service startup routine to check for service status first
     //       Just assume best case scenario for now: service is installed and not running
-    SC_HANDLE hscMgr = OpenSCManager(NULL, NULL, 0x80000000);
+    SC_HANDLE hscMgr = OpenSCManager(NULL, NULL, GENERIC_READ);
     if (!hscMgr)
     {
-        std::cout << "OpenSCManagerA failed! " << std::endl;
+        std::cout << "OpenSCManager failed! " << std::endl;
         DWORD error = GetLastError();
         return false;
     }
 
-    SC_HANDLE hscService = OpenService(hscMgr, "Steam Client Service", 0x80000030);
+    SC_HANDLE hscService = OpenService(hscMgr, "Steam Client Service", GENERIC_READ | SERVICE_START | SERVICE_STOP);
     if (!hscService)
     {
         std::cout << "OpenServiceA failed!" << std::endl;
