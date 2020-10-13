@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
             // checking for k_EAppStateUpdateRequired flag should skip optional updates... in theory
             if (outdatedDeps.size() > 0 || (GClientContext()->ClientAppManager()->GetAppInstallState(appIDToUse) & k_EAppStateUpdateRequired))
             {
-                if (!PromptYN("App or one of its dependencies requires updating! Proceed with update?"))
+                if (!PromptYN("App or one of its dependencies requires updating!\nProceed with update?"))
                 {
                     return 0;
                 }

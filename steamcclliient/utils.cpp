@@ -25,9 +25,12 @@ bool IsSteamRunning()
         {
             if (exitCode == STILL_ACTIVE)
             {
+                CloseHandle(hProcess);
                 return true;
             }
         }
+
+        CloseHandle(hProcess);
     }
 
     return false;
@@ -166,12 +169,16 @@ bool SetSteamProtocolHandler()
 
     HKEY hKey;
     LSTATUS err_no = RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Classes\\steam\\Shell\\Open\\Command", 0, KEY_SET_VALUE, &hKey);
-    if (!err_no)
+    if (err_no == ERROR_SUCCESS)
     {
         char openComm[512] = { '\0' };
         sprintf(openComm, "\"\%s\" \"%%1\"", selfPath.c_str());
+
         err_no = RegSetValueExA(hKey, NULL, NULL, RRF_RT_REG_SZ, LPBYTE(openComm), DWORD(sizeof(openComm)));
-        if (!err_no)
+
+        RegCloseKey(hKey);
+
+        if (err_no == ERROR_SUCCESS)
         {
             return true;
         }
@@ -184,10 +191,13 @@ bool SetSteamAutoLoginUser(std::string user)
 {
     HKEY hKey;
     LSTATUS err_no = RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Steam\\", 0, KEY_SET_VALUE, &hKey);
-    if (!err_no)
+    if (err_no == ERROR_SUCCESS)
     {
         err_no = RegSetValueExA(hKey, "AutoLoginUser", NULL, RRF_RT_REG_SZ, LPBYTE(user.c_str()), DWORD(user.size()+1));
-        if (!err_no)
+
+        RegCloseKey(hKey);
+
+        if (err_no == ERROR_SUCCESS)
         {
             return true;
         }
@@ -251,10 +261,11 @@ bool StartSteamService()
     // set "SteamPID" for Steam Client Service, without this value set client service won't start!
     HKEY hKey;
     LSTATUS err_no = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam", 0, KEY_SET_VALUE, &hKey);
-    if (!err_no)
+    if (err_no == ERROR_SUCCESS)
     {
         DWORD ownPID = GetCurrentProcessId();
         LSTATUS stat = RegSetValueExA(hKey, "SteamPID", NULL, REG_DWORD, (LPBYTE)&ownPID, sizeof(ownPID));
+        RegCloseKey(hKey);
     }
     else
     {
@@ -270,7 +281,6 @@ bool StartSteamService()
     if (!hscMgr)
     {
         std::cout << "OpenSCManager failed! " << std::endl;
-        DWORD error = GetLastError();
         return false;
     }
 
@@ -278,15 +288,24 @@ bool StartSteamService()
     if (!hscService)
     {
         std::cout << "OpenServiceA failed!" << std::endl;
+
+        CloseServiceHandle(hscMgr);
+
         return false;
     }
 
     if (!StartService(hscService, 0, NULL))
     {
         std::cout << "Could not start steam client service!" << std::endl;
-        DWORD error = GetLastError();
+
+        CloseServiceHandle(hscMgr);
+        CloseServiceHandle(hscService);
+
         return false;
     }
+
+    CloseServiceHandle(hscMgr);
+    CloseServiceHandle(hscService);
 
     return true;
 }
