@@ -98,17 +98,24 @@ int main(int argc, char* argv[])
 
             for (auto it = outdatedDeps.cbegin(); it != outdatedDeps.cend(); ++it)
             {
-                cmdManager.QueCommand(new ClientInstallAppCommand(*it, 0));
+                cmdManager.QueCommand(new ClientInstallAppCommand(
+                    *it, 
+                    GClientContext()->ClientAppManager()->GetAppInstallBaseFolder(*it)
+                ));
             }
 
             if (GClientContext()->ClientAppManager()->GetAppInstallState(appIDToUse) & k_EAppStateUpdateRequired)
             {
-                cmdManager.QueCommand(new ClientInstallAppCommand(appIDToUse, 0));
+                cmdManager.QueCommand(new ClientInstallAppCommand(
+                    appIDToUse, 
+                    GClientContext()->ClientAppManager()->GetAppInstallBaseFolder(appIDToUse)
+                ));
             }
 
             cmdManager.QueCommand(new ClientRunAppInstallScriptCommand(appIDToUse, false));
             cmdManager.QueCommand(new ClientGetCustomBinariesCommand(appIDToUse));
             cmdManager.QueCommand(new ClientLaunchGameCommand(appIDToUse));
+            cmdManager.QueCommand(new ClientLogOffCommand());
         }
         else if (std::string(args[0]).compare("install") == 0)
         {
@@ -123,7 +130,6 @@ int main(int argc, char* argv[])
             }
 
             cmdManager.QueCommand(new ClientLogOnCommand(loginUser, ""));
-            cmdManager.QueCommand(new ClientInstallAppCommand(appIDToUse));
 
             std::vector<AppId_t> deps;
             GetAppMissingDeps(appIDToUse, &deps);
@@ -134,6 +140,9 @@ int main(int argc, char* argv[])
                     cmdManager.QueCommand(new ClientInstallAppCommand(*it, 0));
                 }
             }
+
+            cmdManager.QueCommand(new ClientInstallAppCommand(appIDToUse));
+            cmdManager.QueCommand(new ClientLogOffCommand());
         }
         else if (std::string(args[0]).compare("uninstall") == 0)
         {

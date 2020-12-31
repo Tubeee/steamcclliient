@@ -141,5 +141,19 @@ private:
     STEAM_CALLBACK(ClientUninstallAppCommand, OnAppEventStateChanged, AppEventStateChange_t, m_stateChangedCb);
 };
 
+
+class ClientLogOffCommand : public ClientCommandBase
+{
+public:
+    ClientLogOffCommand();
+    ~ClientLogOffCommand();
+
+    void Start() override;
+
+private:
+
+    STEAM_CALLBACK(ClientLogOffCommand, OnSteamDisconnected, SteamServersDisconnected_t, m_disconnectedCb);
+};
+
 #endif // CLIENTCOMMANDS_H
 

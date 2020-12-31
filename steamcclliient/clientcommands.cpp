@@ -531,7 +531,37 @@ void ClientGetCustomBinariesCommand::Update()
 
 }
 
+// client logoff command
 ClientGetCustomBinariesCommand::~ClientGetCustomBinariesCommand()
 {
 
 }
+
+ClientLogOffCommand::ClientLogOffCommand():
+    m_disconnectedCb(this, &ClientLogOffCommand::OnSteamDisconnected)
+{
+}
+
+ClientLogOffCommand::~ClientLogOffCommand()
+{
+}
+
+void ClientLogOffCommand::Start()
+{
+    m_started = true;
+
+    if (!GClientContext()->ClientUser()->BLoggedOn())
+    {
+        m_finished = true;
+        return;
+    }
+
+    GClientContext()->ClientUser()->LogOff();
+}
+
+void ClientLogOffCommand::OnSteamDisconnected(SteamServersDisconnected_t* respCb)
+{
+    m_finished = true;
+}
+
+
