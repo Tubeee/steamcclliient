@@ -65,7 +65,9 @@ int main(int argc, char* argv[])
 
     if (args.size() > 0)
     {
-        if (std::string(args[0]).compare("run") == 0 || std::string(args[0]).compare("launch") == 0 || std::string(args[0]).compare("rungameid") == 0)
+        if (std::string(args[0]).compare("run") == 0 ||
+            std::string(args[0]).compare("launch") == 0
+        )
         {
             // AppID != CGameID so this is kinda wrong, but still works in most cases
             // 
